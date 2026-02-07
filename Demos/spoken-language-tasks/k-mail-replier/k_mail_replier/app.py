@@ -43,7 +43,7 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
 
 def get_prompt():
     """Write a polite reply to this email thanks the sender for the request and saying that we will reply with more detail soon:"""    
