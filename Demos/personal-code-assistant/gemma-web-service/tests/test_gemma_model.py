@@ -3,10 +3,16 @@ from unittest.mock import patch, MagicMock
 import os
 import sys
 
-# Mock dependencies that might be missing in the environment
+# Pylint directive to ignore import errors for mocked modules
+# pylint: disable=import-error
+# Pylint directive to allow imports not at top of file
+# pylint: disable=wrong-import-position
+
+# Mock dependencies that might be missing in the environment or need isolation
+# We must mock these before importing gemma_model because it imports them at top-level.
 sys.modules['dotenv'] = MagicMock()
 sys.modules['keras_nlp'] = MagicMock()
-# Also mock submodules if needed
+# Also mock submodules if needed for deep imports
 sys.modules['keras_nlp.models'] = MagicMock()
 
 # Add the parent directory to sys.path so we can import gemma_service
@@ -15,20 +21,26 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-# Now import the module to be tested
-# Using importlib to ensure we get a fresh import if needed,
-# though for a script execution it's usually fine.
-from gemma_service import gemma_model
+# Import the module to be tested
+# Using strict import to ensure we get the module from our path
+try:
+    from gemma_service import gemma_model
+except ImportError:
+    # Fallback if package structure is not standard
+    import gemma_model
 
 class TestGemmaModel(unittest.TestCase):
+    """Test suite for gemma_model.py initialization logic."""
 
     def setUp(self):
+        """Setup for each test."""
         # Reset mocks before each test if necessary
         pass
 
     @patch('gemma_service.gemma_model.load_dotenv')
     @patch('gemma_service.gemma_model.os.getenv')
     def test_initialize_model_success(self, mock_getenv, mock_load_dotenv):
+        """Test successful initialization with valid environment variables."""
         # Setup mocks
         mock_getenv.side_effect = lambda key: {
             'KAGGLE_USERNAME': 'test_user',
@@ -54,6 +66,7 @@ class TestGemmaModel(unittest.TestCase):
     @patch('gemma_service.gemma_model.load_dotenv')
     @patch('gemma_service.gemma_model.os.getenv')
     def test_initialize_model_missing_username(self, mock_getenv, mock_load_dotenv):
+        """Test initialization failure when KAGGLE_USERNAME is missing."""
         # Setup mocks
         mock_getenv.side_effect = lambda key: {
             'KAGGLE_USERNAME': None,
@@ -67,6 +80,7 @@ class TestGemmaModel(unittest.TestCase):
     @patch('gemma_service.gemma_model.load_dotenv')
     @patch('gemma_service.gemma_model.os.getenv')
     def test_initialize_model_missing_key(self, mock_getenv, mock_load_dotenv):
+        """Test initialization failure when KAGGLE_KEY is missing."""
         # Setup mocks
         mock_getenv.side_effect = lambda key: {
             'KAGGLE_USERNAME': 'test_user',
