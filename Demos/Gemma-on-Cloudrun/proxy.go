@@ -27,7 +27,7 @@ var geminiToOpenAiActionMapping = map[string]string{
 	"generateAnswer":        "chat/completions",
 }
 
-var geminiToOpenAiAPIVersionhMapping = map[string]string{
+var geminiToOpenAiAPIVersionMapping = map[string]string{
 	"v1beta": "v1",
 	"v1":     "v1",
 }
@@ -121,7 +121,7 @@ func (h *ProxyHandler) setupGeminiProxy(w http.ResponseWriter, r *http.Request, 
 	log.Printf("Model Version: %s\n", modelVersion)
 	log.Printf("Real Path: %s\n", action)
 
-	convertedAPIVersion, convertedAPIVersionOk := geminiToOpenAiAPIVersionhMapping[apiVersion]
+	convertedAPIVersion, convertedAPIVersionOk := geminiToOpenAiAPIVersionMapping[apiVersion]
 	convertedAction, convertedActionOk := geminiToOpenAiActionMapping[action]
 
 	if !(convertedAPIVersionOk && convertedActionOk) {
@@ -215,7 +215,7 @@ func (h *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// We create a new proxy for each request to avoid race conditions on Director and ModifyResponse
 	proxy := httputil.NewSingleHostReverseProxy(h.config.TargetURL)
 
-	log.Printf("Received URL apth: %s", r.URL.Path)
+	log.Printf("Received URL path: %s", r.URL.Path)
 
 	matches := geminiAPIPathRegex.FindStringSubmatch(r.URL.Path)
 
