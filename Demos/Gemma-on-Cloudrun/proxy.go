@@ -34,6 +34,8 @@ var geminiToOpenAiAPIVersionhMapping = map[string]string{
 
 const geminiAPIPathRegexPattern = `/([^/]+)/models/([^/]+):([^/]+)$`
 
+var geminiAPIPathRegex = regexp.MustCompile(geminiAPIPathRegexPattern)
+
 func modifyNonStreamResponse(resp *http.Response, action string) error {
 	targetBodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -96,8 +98,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Received URL apth: %s", r.URL.Path)
 
-		re := regexp.MustCompile(geminiAPIPathRegexPattern)
-		matches := re.FindStringSubmatch(r.URL.Path)
+		matches := geminiAPIPathRegex.FindStringSubmatch(r.URL.Path)
 
 		var (
 			isCurrentRequestGeminiStyle bool   = false
