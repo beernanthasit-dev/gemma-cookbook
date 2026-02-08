@@ -138,20 +138,12 @@ func ConvertStreamResponseBody(originalBody io.ReadCloser, pw *io.PipeWriter, do
 	}()
 }
 
-func flatten[T any](nested [][]T) []T {
-	var flattened []T
-	for _, innerList := range nested {
-		flattened = append(flattened, innerList...)
-	}
-	return flattened
-}
-
 func convertContentsToMessages(contents []*genai.Content) []openai.ChatCompletionMessageParamUnion {
-	nestedMessageList := make([][]openai.ChatCompletionMessageParamUnion, len(contents))
-	for i, content := range contents {
-		nestedMessageList[i] = convertContentToMessages(content)
+	messages := make([]openai.ChatCompletionMessageParamUnion, 0, len(contents))
+	for _, content := range contents {
+		messages = append(messages, convertContentToMessages(content)...)
 	}
-	return flatten(nestedMessageList)
+	return messages
 }
 
 func convertContentToMessages(content *genai.Content) []openai.ChatCompletionMessageParamUnion {
