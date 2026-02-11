@@ -25,13 +25,17 @@ var geminiToOpenAiModelMapping = map[string]string{
 }
 
 var openAiToGeminiModelMapping = map[string]string{
-	"gemma3:1b":  "gemma-3-1b-it",
-	"gemma3:4b":  "gemma-3-4b-it",
-	"gemma3:12b": "gemma-3-12b-it",
-	"gemma3:27b": "gemma-3-27b-it",
+	"gemma3:1b":   "gemma-3-1b-it",
+	"gemma3:4b":   "gemma-3-4b-it",
+	"gemma3:12b":  "gemma-3-12b-it",
+	"gemma3:27b":  "gemma-3-27b-it",
 	"gemma3n:E2b": "gemma-3n-e2b-it",
 	"gemma3n:E4b": "gemma-3n-e4b-it",
 }
+
+var newline = []byte{'\n'}
+var dataPrefix = []byte("data: ")
+var doneMarker = []byte("[DONE]")
 
 type ChatCompletionRequest struct {
 	Stream           bool
@@ -108,16 +112,15 @@ func ConvertStreamResponseBody(originalBody io.ReadCloser, pw *io.PipeWriter, do
 				fmt.Fprintf(pw, "stream read error: %v", err)
 				break
 			}
-			log.Printf("original line: %s", line)
 
 			trimmed := bytes.TrimSpace(line)
-			if len(trimmed) == 0 || !bytes.HasPrefix(trimmed, []byte("data: ")) {
+			if len(trimmed) == 0 || !bytes.HasPrefix(trimmed, dataPrefix) {
 				continue
 			}
 
-			raw := bytes.TrimSpace(bytes.TrimPrefix(trimmed, []byte("data: ")))
+			raw := bytes.TrimSpace(bytes.TrimPrefix(trimmed, dataPrefix))
 
-			if bytes.Equal(raw, []byte("[DONE]")) {
+			if bytes.Equal(raw, doneMarker) {
 				break
 			}
 
@@ -133,7 +136,8 @@ func ConvertStreamResponseBody(originalBody io.ReadCloser, pw *io.PipeWriter, do
 				fmt.Fprintf(pw, "failed to convert chunk, error: %v, raw: %s", err, string(raw))
 				continue
 			}
-			pw.Write(append(bodyBytes, '\n'))
+			pw.Write(bodyBytes)
+			pw.Write(newline)
 		}
 	}()
 }
