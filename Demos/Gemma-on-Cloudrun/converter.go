@@ -33,6 +33,8 @@ var openAiToGeminiModelMapping = map[string]string{
 	"gemma3n:E4b": "gemma-3n-e4b-it",
 }
 
+var newline = []byte{'\n'}
+
 type ChatCompletionRequest struct {
 	Stream           bool
 	StreamOptions    openai.ChatCompletionStreamOptionsParam
@@ -108,8 +110,6 @@ func ConvertStreamResponseBody(originalBody io.ReadCloser, pw *io.PipeWriter, do
 				fmt.Fprintf(pw, "stream read error: %v", err)
 				break
 			}
-			log.Printf("original line: %s", line)
-
 			trimmed := bytes.TrimSpace(line)
 			if len(trimmed) == 0 || !bytes.HasPrefix(trimmed, []byte("data: ")) {
 				continue
@@ -133,7 +133,8 @@ func ConvertStreamResponseBody(originalBody io.ReadCloser, pw *io.PipeWriter, do
 				fmt.Fprintf(pw, "failed to convert chunk, error: %v, raw: %s", err, string(raw))
 				continue
 			}
-			pw.Write(append(bodyBytes, '\n'))
+			pw.Write(bodyBytes)
+			pw.Write(newline)
 		}
 	}()
 }
