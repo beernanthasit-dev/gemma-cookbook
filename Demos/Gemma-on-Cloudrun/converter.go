@@ -15,6 +15,13 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+var (
+	// Pre-allocate byte slices to avoid repeated conversions in hot loops
+	newline    = []byte{'\n'}
+	dataPrefix = []byte("data: ")
+	doneMarker = []byte("[DONE]")
+)
+
 var geminiToOpenAiModelMapping = map[string]string{
 	"gemma-3-1b-it":  "gemma3:1b",
 	"gemma-3-4b-it":  "gemma3:4b",
@@ -108,16 +115,14 @@ func ConvertStreamResponseBody(originalBody io.ReadCloser, pw *io.PipeWriter, do
 				fmt.Fprintf(pw, "stream read error: %v", err)
 				break
 			}
-			log.Printf("original line: %s", line)
-
 			trimmed := bytes.TrimSpace(line)
-			if len(trimmed) == 0 || !bytes.HasPrefix(trimmed, []byte("data: ")) {
+			if len(trimmed) == 0 || !bytes.HasPrefix(trimmed, dataPrefix) {
 				continue
 			}
 
-			raw := bytes.TrimSpace(bytes.TrimPrefix(trimmed, []byte("data: ")))
+			raw := bytes.TrimSpace(bytes.TrimPrefix(trimmed, dataPrefix))
 
-			if bytes.Equal(raw, []byte("[DONE]")) {
+			if bytes.Equal(raw, doneMarker) {
 				break
 			}
 
@@ -133,7 +138,9 @@ func ConvertStreamResponseBody(originalBody io.ReadCloser, pw *io.PipeWriter, do
 				fmt.Fprintf(pw, "failed to convert chunk, error: %v, raw: %s", err, string(raw))
 				continue
 			}
-			pw.Write(append(bodyBytes, '\n'))
+			// Optimization: Use separate Write calls to avoid allocating a new slice for append
+			pw.Write(bodyBytes)
+			pw.Write(newline)
 		}
 	}()
 }
