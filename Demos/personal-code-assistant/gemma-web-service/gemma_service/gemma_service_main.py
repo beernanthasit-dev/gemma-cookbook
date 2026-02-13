@@ -30,9 +30,10 @@ class Response(BaseModel):
     text: str
 
 @app.post("/gemma_request/")
-async def process_text(request: Request):
+def process_text(request: Request):
     """
     Processes the input text and returns a modified version.
+    Note: defined as a synchronous function to run in a threadpool and avoid blocking the event loop during model inference.
     """
     response_text = gemma_model(request.text)
     response = Response(text=response_text)
