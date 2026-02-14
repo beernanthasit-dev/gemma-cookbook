@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"time"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestConvertRequestBody_GenerateContent(t *testing.T) {

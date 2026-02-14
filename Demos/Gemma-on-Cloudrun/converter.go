@@ -16,19 +16,19 @@ import (
 )
 
 var geminiToOpenAiModelMapping = map[string]string{
-	"gemma-3-1b-it":  "gemma3:1b",
-	"gemma-3-4b-it":  "gemma3:4b",
-	"gemma-3-12b-it": "gemma3:12b",
-	"gemma-3-27b-it": "gemma3:27b",
+	"gemma-3-1b-it":   "gemma3:1b",
+	"gemma-3-4b-it":   "gemma3:4b",
+	"gemma-3-12b-it":  "gemma3:12b",
+	"gemma-3-27b-it":  "gemma3:27b",
 	"gemma-3n-e2b-it": "gemma3n:E2b",
 	"gemma-3n-e4b-it": "gemma3n:E4b",
 }
 
 var openAiToGeminiModelMapping = map[string]string{
-	"gemma3:1b":  "gemma-3-1b-it",
-	"gemma3:4b":  "gemma-3-4b-it",
-	"gemma3:12b": "gemma-3-12b-it",
-	"gemma3:27b": "gemma-3-27b-it",
+	"gemma3:1b":   "gemma-3-1b-it",
+	"gemma3:4b":   "gemma-3-4b-it",
+	"gemma3:12b":  "gemma-3-12b-it",
+	"gemma3:27b":  "gemma-3-27b-it",
 	"gemma3n:E2b": "gemma-3n-e2b-it",
 	"gemma3n:E4b": "gemma-3n-e4b-it",
 }
@@ -97,18 +97,15 @@ func ConvertStreamResponseBody(originalBody io.ReadCloser, pw *io.PipeWriter, do
 			pw.Close()
 			close(done)
 		}()
-		reader := bufio.NewReader(originalBody)
 
-		for {
-			line, err := reader.ReadBytes('\n')
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				fmt.Fprintf(pw, "stream read error: %v", err)
-				break
-			}
-			log.Printf("original line: %s", line)
+		// Use Scanner to avoid allocations for each line
+		scanner := bufio.NewScanner(originalBody)
+		// Pre-allocate newline slice to avoid allocation in loop
+		newline := []byte{'\n'}
+
+		for scanner.Scan() {
+			line := scanner.Bytes()
+			// log.Printf("original line: %s", line) // Removed for performance
 
 			trimmed := bytes.TrimSpace(line)
 			if len(trimmed) == 0 || !bytes.HasPrefix(trimmed, []byte("data: ")) {
@@ -133,7 +130,13 @@ func ConvertStreamResponseBody(originalBody io.ReadCloser, pw *io.PipeWriter, do
 				fmt.Fprintf(pw, "failed to convert chunk, error: %v, raw: %s", err, string(raw))
 				continue
 			}
-			pw.Write(append(bodyBytes, '\n'))
+			// Write directly to pipe to avoid allocating a new slice with append
+			pw.Write(bodyBytes)
+			pw.Write(newline)
+		}
+
+		if err := scanner.Err(); err != nil {
+			fmt.Fprintf(pw, "stream read error: %v", err)
 		}
 	}()
 }
